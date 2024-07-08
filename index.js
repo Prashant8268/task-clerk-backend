@@ -38,7 +38,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
-
+// working
   socket.on('editTask', async ({ id: taskId, name: newName }) => {
     try {
       const updatedTask = await Task.findByIdAndUpdate(taskId, { name: newName }, { new: true });
@@ -48,7 +48,7 @@ io.on('connection', (socket) => {
       console.error('Error editing task:', error);
     }
   });
-
+// working
   socket.on('editTaskDescription',async ({id: taskId , description: newDescription})=>{
     try{
       const updatedTask = await Task.findByIdAndUpdate(taskId, { description:newDescription }, { new: true });
@@ -61,8 +61,8 @@ io.on('connection', (socket) => {
       console.error('Error editing task:', err);
     }
   })
-
-  socket.on('editTaskDeadline', async ({ taskId, newDeadline }) => {
+// working
+  socket.on('editTaskDeadline', async ({ id: taskId, deadline: newDeadline }) => {
     try {
       const updatedTask = await Task.findByIdAndUpdate(taskId, { deadline: newDeadline }, { new: true });
       io.emit('taskUpdated', updatedTask);
@@ -70,7 +70,7 @@ io.on('connection', (socket) => {
       console.error('Error editing task deadline:', error);
     }
   });
-
+// working
   socket.on('deleteTask', async ({id:taskId}) => {
     try {
       const task = await Task.findById(taskId);
@@ -89,10 +89,10 @@ io.on('connection', (socket) => {
     }
   });
 
+  // working
   socket.on('addTask', async (newTask) => {
     try {
       let task = new Task(newTask);
-      // task.deadline = task.deadline.toISOString().split('T')[0]
       const savedTask = await task.save();
       await savedTask.save();;
       const workspace = await Workspace.findById(newTask.workspaceId);
