@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const Task = require('./Models/Task'); // Assuming you have a Task model
 const Workspace = require('./Models/Workspace')
-
+const Card = require('./Models/Card');
 dotenv.config();
 
 const app = express();
@@ -56,7 +56,7 @@ io.on('connection', (socket) => {
           throw new Error('Task not found');
       }
       await updatedTask.populate({path:'cards',model:'Card'});
-      io.emit('taskDescriptionUpdated', updatedTask)
+      io.emit('taskUpdated', updatedTask)
     }catch(err){
       console.error('Error editing task:', err);
     }
@@ -94,7 +94,7 @@ io.on('connection', (socket) => {
     try {
       let task = new Task(newTask);
       const savedTask = await task.save();
-      await savedTask.save();;
+      await savedTask.save();
       const workspace = await Workspace.findById(newTask.workspaceId);
       workspace.tasks.push(savedTask);
       await workspace.save()
@@ -104,27 +104,46 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('addCard', async ({ taskId, card }) => {
+  socket.on('addCard', async ({ taskId, newCardText }) => {
     try {
       const task = await Task.findById(taskId);
-      task.cards.push(card);
+      const newCard = new Card({ text: newCardText });
+      await newCard.save();
+      task.cards.push(newCard._id);
       const updatedTask = await task.save();
+      await updatedTask.populate({ path: 'cards', model: 'Card' });
       io.emit('taskUpdated', updatedTask);
     } catch (error) {
       console.error('Error adding card:', error);
     }
   });
 
-  socket.on('deleteCard', async ({ taskId, cardIndex }) => {
+  socket.on('deleteCard', async ({ taskId, cardId }) => {
     try {
       const task = await Task.findById(taskId);
+      if (!task) {
+        console.error('Task not found');
+        return;
+      }
+      const cardIndex = task.cards.indexOf(cardId);
+      if (cardIndex === -1) {
+        console.error('Card not found in task');
+        return;
+      }
       task.cards.splice(cardIndex, 1);
       const updatedTask = await task.save();
+      await Card.findByIdAndDelete(cardId);
+  
+      await updatedTask.populate({ path: 'cards', model: 'Card' })
       io.emit('taskUpdated', updatedTask);
     } catch (error) {
       console.error('Error deleting card:', error);
     }
   });
+
+  socket.on('deleteWorkspace', ({ workspaceId }) => {
+    io.emit('workspaceDeleted', { workspaceId });
+});
 });
 
 // Express routes (if needed)
